@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Viz Expense Tracker</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jointjs/3.3.0/joint.min.css" />
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(to right, #e8e8e8, #ffffff);
+            font-family: 'Arial, sans-serif';
+            overflow: hidden;
+        }
+        #main-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 1200px;
+            margin-top: 20px;
+        }
+        #canvas {
+            width: 800px;
+            height: 800px;
+            position: relative;
+            border: 1px solid #ccc;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .item {
+            width: 120px;
+            height: 120px;
+            position: absolute;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            cursor: grab;
+            background: #f9f9f9;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .item img {
+            max-width: 60%;
+            max-height: 60%;
+        }
+        .label {
+            font-size: 14px;
+            text-align: center;
+            margin-top: 5px;
+        }
+        .house-shape {
+            width: 150px;
+            height: 150px;
+            position: absolute;
+            left: 325px; /* Centered based on canvas size */
+            top: 325px; /* Centered based on canvas size */
+            cursor: grab;
+            background: #f9f9f9;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        #chart-container {
+            width: 100%;
+            max-width: 800px;
+            height: 400px;
+            margin-bottom: 20px;
+        }
+        #add-item-button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin-bottom: 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        #add-item-button:hover {
+            background-color: #45a049;
+        }
+        #add-item-form {
+            display: none;
+            position: absolute;
+            top: 50px;
+            left: 50px;
+            background: white;
+            border: 1px solid #ccc;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .popup {
+            display: none;
+            position: absolute;
+            width: 250px;
+            padding: 20px;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .popup .item {
+            width: 80px;
+            height: 80px;
+            margin: 5px;
+            cursor: default;
+        }
+        .popup .item img {
+            max-width: 50%;
+            max-height: 50%;
+        }
+        @media (max-width: 768px) {
+            #canvas {
+                width: 100%;
+                height: 500px;
+            }
+            .item {
+                width: 80px;
+                height: 80px;
+            }
+            .label {
+                font-size: 12px;
+            }
+            .house-shape {
+                width: 100px;
+                height: 100px;
+                left: 200px;
+                top: 200px;
+            }
+            #chart-container {
+                width: 100%;
+                height: 300px;
+            }
+            #add-item-button {
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+        }
+        .anime-bg {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
+        }
+        h1 {
+            margin-top: 20px;
+            font-size: 2.5em;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <canvas class="anime-bg"></canvas>
+    <h1>Viz Expense Tracker</h1>
+    <div id="main-container">
+        <div id="canvas">
+            <div class="item house-shape" id="housing">
+                <img src="mortgageORrent.png" alt="Housing">
+                <div class="label">Mortgage/Rent<br>$1,500</div>
+            </div>
+        </div>
+        <div id="chart-container">
+            <canvas id="myChart"></canvas>
+        </div>
+    </div>
+    <button id="add-item-button">Add Item</button>
+    <div id="add-item-form">
+        <h3>Add New Item</h3>
+        <label for="item-label">Label:</label>
+        <input type="text" id="item-label" name="item-label"><br><br>
+        <label for="item-image">Image URL:</label>
+        <input type="text" id="item-image" name="item-image"><br><br>
+        <button id="submit-item">Add</button>
+    </div>
+    <div class="popup" id="entertainment-popup">
+        <div class="item">
+            <img src="netflix.png" alt="Netflix">
+            <div class="label">Netflix<br>$15</div>
+        </div>
+        <div class="item">
+            <img src="amazon.png" alt="Amazon">
+            <div class="label">Amazon<br>$10</div>
+        </div>
+    </div>
+
+    <!-- Include Chart.js library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Include Anime.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <!-- Include interact.js library -->
+    <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const addItemButton = document.getElementById('add-item-button');
+        const addItemForm = document.getElementById('add-item-form');
+        const submitItemButton = document.getElementById('submit-item');
+        const entertainmentPopup = document.getElementById('entertainment-popup');
+
+        const nationalMedians = {
+            'Mortgage/Rent': 1500,
+            'Water': 50,
+            'Electricity': 100,
+            'Gas': 75,
+            'Groceries': 400,
+            'Transportation': 250,
+            'Health Care': 200,
+            'Debt Payments': 300,
+            'Savings': 200,
+            'Entertainment': 25, // Sum of sub-items Netflix ($15) + Amazon ($10)
+            'Insurance': 200,
+            'Miscellaneous': 100
+        };
+
+        const items = [
+            { label: 'Mortgage/Rent', img: 'mortgageORrent.png', color: '#ff9999' },
+            { label: 'Water', img: 'water.png', color: '#ffcc99' },
+            { label: 'Electricity', img: 'electricity.png', color: '#ffcc99' },
+            { label: 'Gas', img: 'gas.png', color: '#ffcc99' },
+            { label: 'Groceries', img: 'Groceries.png', color: '#ffff99' },
+            { label: 'Transportation', img: 'Transportation.png', color: '#ccff99' },
+            { label: 'Health Care', img: 'HealthCare.png', color: '#99ff99' },
+            { label: 'Debt Payments', img: 'creditcard.png', color: '#99ffcc' },
+            { label: 'Savings', img: 'savings.png', color: '#99ccff' },
+            { label: 'Entertainment', img: 'Entertainment.png', color: '#9999ff' },
+            { label: 'Insurance', img: 'Insurance.png', color: '#cc99ff' },
+            { label: 'Miscellaneous', img: 'Misc.png', color: '#ff99cc' }
+        ];
+
+        const radius = 350;
+        const centerX = 400;
+        const centerY = 400;
+
+        function getRandomExpense(median) {
+            return Math.round(median * (0.8 + Math.random() * 0.4)); // Random value between 80% and 120% of the median
+        }
+
+        function addItemToCanvas(item, index) {
+            const angle = (index / items.length) * 2 * Math.PI;
+            const x = centerX + radius * Math.cos(angle) - 60;
+            const y = centerY + radius * Math.sin(angle) - 60;
+
+            const element = document.createElement('div');
+            element.className = 'item';
+            element.style.left = `${x}px`;
+            element.style.top = `${y}px`;
+            element.style.backgroundColor = item.color;
+
+            const img = document.createElement('img');
+            img.src = item.img;
+            img.alt = item.label;
+            element.appendChild(img);
+
+            const label = document.createElement('div');
+            label.className = 'label';
+            const expense = getRandomExpense(nationalMedians[item.label]);
+            label.innerHTML = `${item.label}<br>$${expense}`;
+            element.appendChild(label);
+
+            canvas.appendChild(element);
+
+            // Add item to chart
+            addItemToChart(item.label, expense, item.color);
+
+            interact('.item').draggable({
+                listeners: {
+                    start(event) {
+                        event.target.style.cursor = 'grabbing';
+                    },
+                    move(event) {
+                        const target = event.target;
+                        const x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
+                        const y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
+
+                        target.style.transform = `translate(${x}px, ${y}px)`;
+                        target.setAttribute('data-x', x);
+                        target.setAttribute('data-y', y);
+                    },
+                    end(event) {
+                        event.target.style.cursor = 'grab';
+                    }
+                }
+            });
+
+            if (item.label === 'Entertainment') {
+                element.addEventListener('click', (e) => {
+                    showPopup(e, element);
+                });
+            }
+        }
+
+        function addItemToChart(label, expense, color) {
+            chart.data.labels.push(label);
+            chart.data.datasets[0].data.push(expense);
+            chart.data.datasets[0].backgroundColor.push(color);
+            chart.data.datasets[0].borderColor.push(color);
+            chart.update();
+        }
+
+        function showPopup(event, parentElement) {
+            const rect = parentElement.getBoundingClientRect();
+            entertainmentPopup.style.left = `${rect.left + window.scrollX}px`;
+            entertainmentPopup.style.top = `${rect.top + window.scrollY - entertainmentPopup.offsetHeight}px`;
+            entertainmentPopup.style.display = 'block';
+        }
+
+        entertainmentPopup.addEventListener('mouseleave', () => {
+            entertainmentPopup.style.display = 'none';
+        });
+
+        // Initialize the chart before adding items to it
+        const ctx = document.getElementById('myChart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Monthly Expenses',
+                    data: [],
+                    backgroundColor: [],
+                    borderColor: [],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        items.forEach((item, index) => addItemToCanvas(item, index));
+
+        interact('.house-shape').draggable({
+            listeners: {
+                start(event) {
+                    event.target.style.cursor = 'grabbing';
+                },
+                move(event) {
+                    const target = event.target;
+                    const x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
+                    const y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
+
+                    target.style.transform = `translate(${x}px, ${y}px)`;
+                    target.setAttribute('data-x', x);
+                    target.setAttribute('data-y', y);
+                },
+                end(event) {
+                    event.target.style.cursor = 'grab';
+                }
+            }
+        });
+
+        addItemButton.addEventListener('click', () => {
+            addItemForm.style.display = 'block';
+        });
+
+        submitItemButton.addEventListener('click', () => {
+            const label = document.getElementById('item-label').value;
+            const img = document.getElementById('item-image').value;
+            const newItem = { label, img };
+            items.push(newItem);
+            addItemToCanvas(newItem, items.length - 1);
+            addItemForm.style.display = 'none';
+        });
+
+        // Anime.js background animation
+        const animeBg = document.querySelector('.anime-bg');
+        const ctxBg = animeBg.getContext('2d');
+        animeBg.width = window.innerWidth;
+        animeBg.height = window.innerHeight;
+
+        function drawBackground() {
+            ctxBg.clearRect(0, 0, animeBg.width, animeBg.height);
+            anime({
+                targets: ctxBg,
+                translateX: [
+                    { value: animeBg.width, duration: 2000 },
+                    { value: -animeBg.width, duration: 2000 }
+                ],
+                easing: 'easeInOutQuad',
+                loop: true,
+                update: function(anim) {
+                    ctxBg.fillStyle = '#ccc';
+                    ctxBg.fillRect(0, 0, animeBg.width, animeBg.height);
+                }
+            });
+        }
+
+        drawBackground();
+    </script>
+</body>
+</html>
